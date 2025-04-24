@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Daily Wellness Assistant</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4fdfc;
+      margin: 0;
+      padding: 20px;
+      color: #333;
+    }
+    h1 {
+      text-align: center;
+      color: #00796b;
+    }
+    .section {
+      background: white;
+      padding: 20px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.05);
+    }
+    h2 {
+      margin-top: 0;
+      color: #00796b;
+    }
+    .tracker, .mood-options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .glass {
+      width: 30px;
+      height: 50px;
+      border: 2px solid #00796b;
+      border-radius: 5px;
+      background: white;
+      cursor: pointer;
+    }
+    .glass.full {
+      background: #4db6ac;
+    }
+    input[type="range"] {
+      width: 100%;
+    }
+    .exercise-item {
+      display: flex;
+      align-items: center;
+      margin: 5px 0;
+    }
+    .mood {
+      padding: 10px 20px;
+      background: #e0f2f1;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .mood.selected {
+      background: #00796b;
+      color: white;
+    }
+    button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background: #00796b;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .log-data p {
+      margin: 5px 0;
+    }
+  </style>
+</head>
+<body>
+
+<h1>💚 Daily Wellness Assistant</h1>
+
+<div class="section">
+  <h2>💧 Water Intake</h2>
+  <p>Click the glasses as you drink:</p>
+  <div class="tracker" id="water-tracker"></div>
+</div>
+
+<div class="section">
+  <h2>🛌 Sleep Hours</h2>
+  <label for="sleepHours">Hours Slept:</label>
+  <input type="range" id="sleepHours" min="0" max="12" step="1">
+  <p id="sleepDisplay">0 hours</p>
+</div>
+
+<div class="section">
+  <h2>🏋️ Exercise Checklist</h2>
+  <div>
+    <div class="exercise-item"><input type="checkbox" id="jumping"> <label for="jumping">Jumping Jacks</label></div>
+    <div class="exercise-item"><input type="checkbox" id="squats"> <label for="squats">Squats</label></div>
+    <div class="exercise-item"><input type="checkbox" id="pushups"> <label for="pushups">Push-ups</label></div>
+    <div class="exercise-item"><input type="checkbox" id="plank"> <label for="plank">Plank (30s)</label></div>
+  </div>
+</div>
+
+<div class="section">
+  <h2>🙂 Mood Log</h2>
+  <div class="mood-options" id="mood-options">
+    <div class="mood">😊 Happy</div>
+    <div class="mood">😐 Okay</div>
+    <div class="mood">😔 Sad</div>
+    <div class="mood">😠 Angry</div>
+  </div>
+</div>
+
+<div class="section">
+  <button onclick="saveData()">✅ Save My Day</button>
+  <p id="saveStatus"></p>
+</div>
+
+<div class="section">
+  <h2>📊 Last Saved Log</h2>
+  <div class="log-data" id="logData">
+    <p>No data yet.</p>
+  </div>
+</div>
+
+<script>
+  const waterTracker = document.getElementById("water-tracker");
+  const moodOptions = document.getElementById("mood-options").children;
+  const sleepSlider = document.getElementById("sleepHours");
+  const sleepDisplay = document.getElementById("sleepDisplay");
+  const saveStatus = document.getElementById("saveStatus");
+  const logData = document.getElementById("logData");
+
+  const maxWater = 8;
+  let waterCount = 0;
+  let selectedMood = "";
+
+  function renderWaterTracker() {
+    waterTracker.innerHTML = "";
+    for (let i = 0; i < maxWater; i++) {
+      const glass = document.createElement("div");
+      glass.className = "glass" + (i < waterCount ? " full" : "");
+      glass.addEventListener("click", () => {
+        waterCount = i < waterCount ? i : i + 1;
+        renderWaterTracker();
+      });
+      waterTracker.appendChild(glass);
+    }
+  }
+
+  sleepSlider.addEventListener("input", () => {
+    sleepDisplay.textContent = `${sleepSlider.value} hours`;
+  });
+
+  Array.from(moodOptions).forEach(m => {
+    m.addEventListener("click", () => {
+      Array.from(moodOptions).forEach(mood => mood.classList.remove("selected"));
+      m.classList.add("selected");
+      selectedMood = m.textContent;
+    });
+  });
+
+  function saveData() {
+    const data = {
+      water: waterCount,
+      sleep: sleepSlider.value,
+      mood: selectedMood,
+      exercises: {
+        jumping: document.getElementById("jumping").checked,
+        squats: document.getElementById("squats").checked,
+        pushups: document.getElementById("pushups").checked,
+        plank: document.getElementById("plank").checked
+      }
+    };
+    localStorage.setItem("wellnessData", JSON.stringify(data));
+    saveStatus.textContent = "✅ Data saved!";
+    displayLogData(data);
+  }
+
+  function loadData() {
+    const data = JSON.parse(localStorage.getItem("wellnessData"));
+    if (data) {
+      waterCount = data.water || 0;
+      sleepSlider.value = data.sleep || 0;
+      sleepDisplay.textContent = `${data.sleep} hours`;
+      if (data.exercises) {
+        document.getElementById("jumping").checked = data.exercises.jumping;
+        document.getElementById("squats").checked = data.exercises.squats;
+        document.getElementById("pushups").checked = data.exercises.pushups;
+        document.getElementById("plank").checked = data.exercises.plank;
+      }
+      Array.from(moodOptions).forEach(m => {
+        if (m.textContent === data.mood) {
+          m.classList.add("selected");
+          selectedMood = m.textContent;
+        }
+      });
+      displayLogData(data);
+    }
+  }
+
+  function displayLogData(data) {
+    logData.innerHTML = `
+      <p>💧 Water Intake: ${data.water} / 8 glasses</p>
+      <p>🛌 Sleep: ${data.sleep} hours</p>
+      <p>🙂 Mood: ${data.mood || "Not selected"}</p>
+      <p>🏋️ Exercise Completed:</p>
+      <ul>
+        ${Object.entries(data.exercises).map(([k, v]) => `<li>${capitalize(k)}: ${v ? "✅" : "❌"}</li>`).join('')}
+      </ul>
+    `;
+  }
+
+  function capitalize(word) {
+    return word.charAt(0).toUpperCase() + word.slice(1);
+  }
+
+  // Initialize
+  renderWaterTracker();
+  loadData();
+</script>
+
+</body>
+</html>
