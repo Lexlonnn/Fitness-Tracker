@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Daily Wellness Assistant</title>
+  <title>Day-wise Wellness Tracker</title>
   <style>
     body {
       font-family: 'Segoe UI', sans-serif;
@@ -70,14 +70,20 @@
       border-radius: 8px;
       cursor: pointer;
     }
-    .log-data p {
-      margin: 5px 0;
+    .log-entry {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      margin: 10px 0;
+    }
+    .log-entry h3 {
+      margin: 0 0 10px;
     }
   </style>
 </head>
 <body>
 
-<h1>💚 Daily Wellness Assistant</h1>
+<h1>📅 Daily Wellness Tracker</h1>
 
 <div class="section">
   <h2>💧 Water Intake</h2>
@@ -118,10 +124,8 @@
 </div>
 
 <div class="section">
-  <h2>📊 Last Saved Log</h2>
-  <div class="log-data" id="logData">
-    <p>No data yet.</p>
-  </div>
+  <h2>📊 Wellness History</h2>
+  <div id="historyLog"></div>
 </div>
 
 <script>
@@ -130,7 +134,7 @@
   const sleepSlider = document.getElementById("sleepHours");
   const sleepDisplay = document.getElementById("sleepDisplay");
   const saveStatus = document.getElementById("saveStatus");
-  const logData = document.getElementById("logData");
+  const historyLog = document.getElementById("historyLog");
 
   const maxWater = 8;
   let waterCount = 0;
@@ -161,6 +165,11 @@
     });
   });
 
+  function getTodayKey() {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    return `wellness-${today}`;
+  }
+
   function saveData() {
     const data = {
       water: waterCount,
@@ -173,52 +182,70 @@
         plank: document.getElementById("plank").checked
       }
     };
-    localStorage.setItem("wellnessData", JSON.stringify(data));
-    saveStatus.textContent = "✅ Data saved!";
-    displayLogData(data);
+    const key = getTodayKey();
+    localStorage.setItem(key, JSON.stringify(data));
+    saveStatus.textContent = "✅ Today's data saved!";
+    loadAllLogs();
   }
 
-  function loadData() {
-    const data = JSON.parse(localStorage.getItem("wellnessData"));
-    if (data) {
-      waterCount = data.water || 0;
-      sleepSlider.value = data.sleep || 0;
-      sleepDisplay.textContent = `${data.sleep} hours`;
-      if (data.exercises) {
-        document.getElementById("jumping").checked = data.exercises.jumping;
-        document.getElementById("squats").checked = data.exercises.squats;
-        document.getElementById("pushups").checked = data.exercises.pushups;
-        document.getElementById("plank").checked = data.exercises.plank;
-      }
-      Array.from(moodOptions).forEach(m => {
-        if (m.textContent === data.mood) {
-          m.classList.add("selected");
-          selectedMood = m.textContent;
-        }
-      });
-      displayLogData(data);
+  function loadAllLogs() {
+    historyLog.innerHTML = "";
+    const keys = Object.keys(localStorage).filter(k => k.startsWith("wellness-")).sort().reverse();
+    if (keys.length === 0) {
+      historyLog.innerHTML = "<p>No logs yet.</p>";
+      return;
     }
-  }
 
-  function displayLogData(data) {
-    logData.innerHTML = `
-      <p>💧 Water Intake: ${data.water} / 8 glasses</p>
-      <p>🛌 Sleep: ${data.sleep} hours</p>
-      <p>🙂 Mood: ${data.mood || "Not selected"}</p>
-      <p>🏋️ Exercise Completed:</p>
-      <ul>
-        ${Object.entries(data.exercises).map(([k, v]) => `<li>${capitalize(k)}: ${v ? "✅" : "❌"}</li>`).join('')}
-      </ul>
-    `;
+    keys.forEach(key => {
+      const data = JSON.parse(localStorage.getItem(key));
+      const date = key.split("-").slice(1).join("-");
+      const entry = document.createElement("div");
+      entry.className = "log-entry";
+      entry.innerHTML = `
+        <h3>📅 ${date}</h3>
+        <p>💧 Water: ${data.water} / 8 glasses</p>
+        <p>🛌 Sleep: ${data.sleep} hours</p>
+        <p>🙂 Mood: ${data.mood || "Not selected"}</p>
+        <p>🏋️ Exercise:</p>
+        <ul>
+          ${Object.entries(data.exercises).map(([k, v]) => `<li>${capitalize(k)}: ${v ? "✅" : "❌"}</li>`).join('')}
+        </ul>
+      `;
+      historyLog.appendChild(entry);
+    });
   }
 
   function capitalize(word) {
     return word.charAt(0).toUpperCase() + word.slice(1);
   }
 
-  // Initialize
+  function loadTodayDataIfExists() {
+    const todayData = localStorage.getItem(getTodayKey());
+    if (todayData) {
+      const data = JSON.parse(todayData);
+      waterCount = data.water || 0;
+      sleepSlider.value = data.sleep || 0;
+      sleepDisplay.textContent = `${data.sleep} hours`;
+
+      if (data.exercises) {
+        document.getElementById("jumping").checked = data.exercises.jumping;
+        document.getElementById("squats").checked = data.exercises.squats;
+        document.getElementById("pushups").checked = data.exercises.pushups;
+        document.getElementById("plank").checked = data.exercises.plank;
+      }
+
+      Array.from(moodOptions).forEach(m => {
+        if (m.textContent === data.mood) {
+          m.classList.add("selected");
+          selectedMood = m.textContent;
+        }
+      });
+    }
+  }
+
   renderWaterTracker();
-  loadData();
+  loadTodayDataIfExists();
+  loadAllLogs();
 </script>
 
 </body>
